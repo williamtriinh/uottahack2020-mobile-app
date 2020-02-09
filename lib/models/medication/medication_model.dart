@@ -6,29 +6,18 @@ import "package:provider/provider.dart";
 
 
 import "package:app/models/medication/medication.dart";
-import "package:app/widgets/medication_item.dart";
+import "package:app/widgets/medication_widget.dart";
 
-class MedicationModel extends ChangeNotifier
+class MedicationModel
 {
-  final List<Medication> _medications = [];
-
-  /// An unmodifiable view of the items in the cart.
-  UnmodifiableListView<Medication> get medications => UnmodifiableListView(_medications);
-
-  void addMedication(Medication medication)
+  static final List<Medication> medications = [];
+  static Widget renderList()
   {
-    _medications.add(medication);
-    notifyListeners();
-  }
-
-  Column renderList()
-  {
-    List<MedicationItem> items = [];
-    _medications.forEach((med) {
-      items.add(new MedicationItem(medication: med));
+    List<Widget> widgets = [];
+    medications.forEach((Medication med) {
+      widgets.add(new MedicationWidget(medication: med));
     });
 
-    return new Column(children: items);
+    return Column(children: widgets);
   }
-  
 }

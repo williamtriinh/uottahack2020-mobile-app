@@ -1,9 +1,15 @@
+import 'dart:convert';
+
 import 'package:app/models/medication/medication_model.dart';
+import 'package:app/models/user_model/user_model.dart';
+import 'package:app/widgets/medication_widget.dart';
 import "package:flutter/material.dart";
 
 import "package:cloud_firestore/cloud_firestore.dart";
 import "package:firebase_auth/firebase_auth.dart";
 import "package:firebase_messaging/firebase_messaging.dart";
+import "package:app/models/medication/medication.dart";
+import 'package:flutter/services.dart';
 
 import "package:provider/provider.dart";
 
@@ -17,52 +23,62 @@ class _HomePage extends State<HomePage>
   final Firestore _firestore = Firestore.instance;
   final FirebaseMessaging _firebaseMessaging = new FirebaseMessaging();
 
-  Widget modal = new Container(width: 0, height: 0);
+  Widget test = Container();
+  String displayName = "";
 
-  void _openMedicationModal()
-  {
-    if (modal is Container)
-    {
-      setState(() {
-        modal = new AddMedicationModal(
-          addData: _addMedication,
-          closeModal: _closeModal
-        );
-      });
-    }
-  }
-
-  void _goToMyMedications(BuildContext context)
+  void _openMedicationPage()
   {
     Navigator.pushNamed(context, medicationPage);
   }
+
+  // void _goToMyMedications(BuildContext context)
+  // {
+  //   Navigator.pushNamed(context, medicationPage);
+  // }
 
   void _signOut(BuildContext context) async
   {
     await _firebaseAuth.signOut();
   }
 
-  void _addMedication() async
+  void _loadMedications() async
   {
+    MedicationModel.medications.clear();
+
     FirebaseUser user = await _firebaseAuth.currentUser();
+
     if (user != null)
     {
-      print("good");
-      // _firestore.collection("medications").document(user.uid);
-    }
-    else
-    {
-      // Logout
-      await _firebaseAuth.signOut();
-      Navigator.popAndPushNamed(context, loginPage);
-    }
-  }
+      // Read the documents
+      
+      DocumentSnapshot snapshot = await _firestore.collection("users").document(user.uid).get();
 
-  void _closeModal()
-  {
-    setState(() {
-      modal = new Container(width: 0, height: 0);
-    });
+      // Store name
+      UserModel.fullName = snapshot["name"];
+      setState(() {
+        displayName = UserModel.fullName;
+      });
+
+      List<dynamic> list = snapshot.data["medications"]??[];
+
+      for (int i=0; i<list.length; i++)
+      {
+        Map<dynamic, dynamic> obj = snapshot.data["medications"][i];
+        MedicationModel.medications.add(
+          new Medication(
+            name: obj["name"],
+            description: obj["desc"],
+            time: obj["times"][0]["time"]
+          )
+        );
+      }
+
+      setState(() {
+        test = MedicationModel.renderList();
+      });
+      
+      
+    }
   }
 
   @override
@@ -75,6 +91,7 @@ class _HomePage extends State<HomePage>
         Navigator.popAndPushNamed(context, loginPage);
       }
     });
+    _loadMedications();
     _firebaseMessaging.configure(
       onResume: (Map<String, dynamic> message) async {
         print("onResume");
@@ -84,50 +101,64 @@ class _HomePage extends State<HomePage>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: SafeArea(
-        child: Stack(
-          children: [
-            Column(
-              children: <Widget>[
-
-                app.ContainerButton(
-                  label: "My medications",
-                  onPressed: () {
-                    print("good");
-                    _goToMyMedications(context);
-                  }
-                ),
-
-                Spacer(),
-                
-                app.ContainerButton(
-                  label: "Sign out",
-                  onPressed: () {
-                    _signOut(context);
-                  }
+    return WillPopScope(
+      onWillPop: () async { return false; },
+      child: Scaffold(
+        body: SafeArea(
+          child: Stack(
+            children: <Widget>[
+              Container(
+                child: ListView(
+                  children: <Widget>[
+                    Container(
+                      margin: EdgeInsets.all(36.0),
+                      child: Text(
+                        "Welcome back,\n${displayName}",
+                        style: TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.w700
+                        )
+                      ),
+                    ),
+                    test
+                  ],
                 )
-              ]
-            ),
-            Align(
-              alignment: Alignment.bottomRight,
-              child: Container(
-                margin: EdgeInsets.only(right: 36.0, bottom: 36.0),
-                child: FloatingActionButton(
-                  child: Text(
-                    "+",
-                    style: TextStyle(
-                      fontSize: 24.0
-                    )
-                  ),
-                  onPressed: () {
-                    _openMedicationModal();
-                  },
+              ),
+
+              Align(
+                alignment: Alignment.bottomCenter,
+                child: Container(
+                  margin: EdgeInsets.only(left: 36.0, right: 36.0),
+                  child: app.ContainerButton(
+                    label: "Sign out",
+                    onPressed: () {
+                      _signOut(context);
+                    }
+                  )
                 )
-              )
-            ),
-            modal
-          ]
+              ),
+
+              Align(
+                alignment: Alignment.bottomRight,
+                child: Container(
+                  margin: EdgeInsets.only(right: 36.0, bottom: 36.0),
+                  child: FloatingActionButton(
+                    child: Text(
+                      "+",
+                      style: TextStyle(
+                        fontSize: 24.0
+                      )
+                    ),
+                    onPressed: () {
+                      _openMedicationPage();
+                      // _loadMedications();
+                    },
+                  )
+                )
+              ),
+            ]
+          )
+        
         )
       )
     );

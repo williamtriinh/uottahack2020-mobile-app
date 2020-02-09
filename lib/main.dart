@@ -10,15 +10,7 @@ import "package:app/routes.dart";
 // void main() => runApp(
 //   MyApp()
 // );
-void main()
-{
-  runApp(
-    ChangeNotifierProvider(
-      create: (context) => MedicationModel(),
-      child: MyApp()
-    )
-  );
-}
+void main() => runApp(MyApp());
 
 class MyApp extends StatelessWidget
 {
